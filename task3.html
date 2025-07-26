@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Image Caption & Description Generator</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    #output { margin-top: 20px; }
+    img { max-width: 300px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Upload an Image to Get Caption & Description</h2>
+  <input type="file" id="imageInput" accept="image/*">
+  <button id="submitBtn">Get Caption & Description</button>
+  <div id="output"></div>
+
+  <script>
+    async function getCaptionDescription(imageBlob) {
+      // Uses Hugging Face Inference API (replace YOUR_HF_TOKEN with your token)
+      const API_URL = "https://api-inference.huggingface.co/models/nlpconnect/vit-gpt2-image-captioning";
+      const HF_TOKEN = "YOUR_HF_TOKEN"; // Replace with your token!
+
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${HF_TOKEN}`
+        },
+        body: imageBlob
+      });
+      const result = await response.json();
+      let caption = "No caption found.";
+      if (Array.isArray(result) && result[0]?.generated_text) {
+        caption = result[0].generated_text;
+      }
+      // Description can be expanded from caption
+      let description = "This image can be described as: " + caption;
+      return { caption, description };
+    }
+
+    document.getElementById("submitBtn").onclick = async function () {
+      const input = document.getElementById("imageInput");
+      const output = document.getElementById("output");
+      output.innerHTML = "";
+      if (input.files.length === 0) {
+        output.textContent = "Please select an image.";
+        return;
+      }
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = async function (e) {
+        const img = document.createElement("img");
+        img.src = e.target.result;
+        output.appendChild(img);
+
+        // Get caption and description
+        const res = await getCaptionDescription(file);
+        const captionDiv = document.createElement("div");
+        captionDiv.innerHTML = `<strong>Caption:</strong> ${res.caption}<br><strong>Description:</strong> ${res.description}`;
+        output.appendChild(captionDiv);
+      };
+      reader.readAsDataURL(file);
+    };
+  </script>
+</body>
+</html>
